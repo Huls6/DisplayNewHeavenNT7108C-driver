@@ -19,8 +19,8 @@ int main() {
     clearScreen();
     sleep(2);
     drawText("Hello There!I print text", 0);
-    drawText("By Thijs Hulshof SP", 3);
-    drawText("Hello There!I print text", 7);
+    drawText("By Thijs Hulshof", 7);
+    drawText("HAN SolarBoat", 3);
     sleep(2);
     //clearScreen();
 
