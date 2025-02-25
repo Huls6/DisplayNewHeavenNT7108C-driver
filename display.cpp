@@ -6,60 +6,60 @@
 
 #include <cstring>
 
-gpiod_chip *chiplocal;
+gpiod_chip* chiplocal;
 
 // Functie om een commando te sturen
 
 void sendCommand(uint8_t cmd) {
-    gpioWriteOutput(chiplocal,RS, 0);  // Commando-modus
-    gpioWriteOutput(chiplocal,CS1, 1);
-    gpioWriteOutput(chiplocal,CS2, 1);
+    gpioWriteOutput(chiplocal, RS, 0);  // Commando-modus
+    gpioWriteOutput(chiplocal, CS1, 1);
+    gpioWriteOutput(chiplocal, CS2, 1);
 
     for (int i = 0; i < 8; i++) {
-        gpioWriteOutput(chiplocal,DATA_PINS[i], (cmd >> i) & 1);
+        gpioWriteOutput(chiplocal, DATA_PINS[i], (cmd >> i) & 1);
     }
 
-    gpioWriteOutput(chiplocal,EN, 1);
+    gpioWriteOutput(chiplocal, EN, 1);
     usleep(1);
-    gpioWriteOutput(chiplocal,EN, 0);
-}
-
-// Initialiseer het LCD
-void initDisplay(gpiod_chip *chip) {
-    chiplocal = chip;
-
-    gpioSetOutputPin(chip,RS);
-    gpioSetOutputPin(chip,EN);
-    gpioSetOutputPin(chip,CS1);
-    gpioSetOutputPin(chip,CS2);
-    gpioSetOutputPin(chip,RST);
-
-    for (int i = 0; i < 8; i++) {
-        gpioSetOutputPin(chip,DATA_PINS[i]);
-    }
-
-    gpioWriteOutput(chip,RST, 1); // Zet reset aan
-    usleep(10000);
-    sendCommand(0x003F);  // LCD inschakelen
+    gpioWriteOutput(chiplocal, EN, 0);
 }
 
 // Functie om data te sturen (pixels of tekst)
 void sendData(uint8_t data) {
-    gpioWriteOutput(chiplocal,RS, 1); // Data-modus
+    gpioWriteOutput(chiplocal, RS, 1); // Data-modus
 
     for (int i = 0; i < 8; i++) {
-        gpioWriteOutput(chiplocal,DATA_PINS[i], (data >> i) & 1);
+        gpioWriteOutput(chiplocal, DATA_PINS[i], (data >> i) & 1);
     }
 
-    gpioWriteOutput(chiplocal,EN, 1);
+    gpioWriteOutput(chiplocal, EN, 1);
     usleep(1);
-    gpioWriteOutput(chiplocal,EN, 0);
+    gpioWriteOutput(chiplocal, EN, 0);
+}
+
+// Initialiseer het LCD
+void initDisplay(gpiod_chip* chip) {
+    chiplocal = chip;
+
+    gpioSetOutputPin(chip, RS);
+    gpioSetOutputPin(chip, EN);
+    gpioSetOutputPin(chip, CS1);
+    gpioSetOutputPin(chip, CS2);
+    gpioSetOutputPin(chip, RST);
+
+    for (int i = 0; i < 8; i++) {
+        gpioSetOutputPin(chip, DATA_PINS[i]);
+    }
+
+    gpioWriteOutput(chip, RST, 1); // Zet reset aan
+    usleep(10000);
+    sendCommand(0x003F);  // LCD inschakelen
 }
 
 // Scherm wissen
 void clearScreen() {
-    gpioWriteOutput(chiplocal,CS1, 1);
-    gpioWriteOutput(chiplocal,CS2, 1);
+    gpioWriteOutput(chiplocal, CS1, 1);
+    gpioWriteOutput(chiplocal, CS2, 1);
     for (int page = 0; page < 8; page++) {
         sendCommand(0x00B8 | page); // Pagina selecteren
         sendCommand(0x0040);        // Zet cursor aan begin
@@ -69,118 +69,57 @@ void clearScreen() {
     }
 }
 
-// Simpele functie om tekst weer te geven (geen font-rendering)
-void drawText(const char* text, uint8_t row) {
-    if(row > 7)
+//functie om cursor op de plek te zetten.
+void setCursor(uint8_t row = 0, uint8_t offset = 0)
+{
+    bool check1 = true;
+    bool check2 = false;
+    uint8_t column = offset;
+    if (row > 7)
     {
         row = 7;
     }
-    sendCommand(0xB8|row);  // Selecteer bovenste rij
-    sendCommand(0x40);  // Zet cursor aan begin
-    gpioWriteOutput(chiplocal,CS1, 1);
-    gpioWriteOutput(chiplocal,CS2, 0);
-    bool runonce = true;
-    uint8_t cnt = 0;
+    if (offset > 63 && offset <= 127)
+    {
+        column = offset - 63;
+        check1 = false;
+        check2 = true;
+    }
+    else if (offset > 127)
+    {
+        column = 0;
+    }
 
+    sendCommand(0xB8 | row);         // Selecteer een rij
+    sendCommand(0x40 | column);      // Zet cursor
+
+    gpioWriteOutput(chiplocal, CS1, check1);
+    gpioWriteOutput(chiplocal, CS2, check2);
+}
+
+
+// Simpele functie om tekst weer te geven (geen font-rendering)
+void drawText(const char* text, uint8_t row, uint8_t offset) {
+    uint8_t cnt = offset;
     for (uint32_t i = 0; i < strlen(text); i++) {
         std::vector<uint8_t> bitmap = getLetterBitmap(text[i]);
         for (size_t y = 0; y < bitmap.size(); y++) {
-            if (cnt>63 && runonce == true) {
-                runonce = false;
-                sendCommand(0x40);  // Zet cursor aan begin
-                gpioWriteOutput(chiplocal,CS1, 0);
-                gpioWriteOutput(chiplocal,CS2, 1);
-            }
-            sendData(bitmap[y]);
+            setCursor(row, cnt);
             cnt++;
-        }
-    }
-
-}
-
-// Cirkel tekenen met de Midpoint Circle Algorithm
-void drawCircle(int x0, int y0, int r) {
-    int x = r, y = 0;
-    int err = 0;
-
-    while (x >= y) {
-        sendData(0xFF);  // Simpel pixels aanzetten
-        y++;
-        if (err <= 0) {
-            err += 2*y + 1;
-        }
-        if (err > 0) {
-            x--;
-            err -= 2*x + 1;
+            sendData(bitmap[y]);
         }
     }
 }
 
-// Functie die de letter 'A' tot 'Z' omzet in 5x7 bitmaps
-std::vector<uint8_t> getLetterBitmap(char letter) {
-    switch (letter) {
-    case 'A': return { 0x7E, 0x11, 0x11, 0x11, 0x7E, 0x00 };
-    case 'B': return { 0x7F, 0x49, 0x49, 0x49, 0x36, 0x00 };
-    case 'C': return { 0x3E, 0x41, 0x41, 0x41, 0x22, 0x00 };
-    case 'D': return { 0x7F, 0x41, 0x41, 0x41, 0x3E, 0x00 };
-    case 'E': return { 0x7F, 0x49, 0x49, 0x49, 0x41, 0x00 };
-    case 'F': return { 0x7F, 0x48, 0x48, 0x48, 0x40, 0x00 };
-    case 'G': return { 0x3E, 0x41, 0x49, 0x49, 0x2E, 0x00 };
-    case 'H': return { 0x7F, 0x08, 0x08, 0x08, 0x7F, 0x00 };
-    case 'I': return { 0x00, 0x41, 0x7F, 0x41, 0x00 };       // Had al 0x00
-    case 'J': return { 0x02, 0x01, 0x01, 0x01, 0x7E, 0x00 };
-    case 'K': return { 0x7F, 0x08, 0x14, 0x22, 0x41, 0x00 };
-    case 'L': return { 0x7F, 0x01, 0x01, 0x01, 0x01, 0x00 };
-    case 'M': return { 0x7F, 0x20, 0x10, 0x20, 0x7F, 0x00 };
-    case 'N': return { 0x7F, 0x20, 0x10, 0x08, 0x7F, 0x00 };
-    case 'O': return { 0x3E, 0x41, 0x41, 0x41, 0x3E, 0x00 };
-    case 'P': return { 0x7F, 0x09, 0x09, 0x09, 0x06, 0x00 };
-    case 'Q': return { 0x3E, 0x41, 0x41, 0x21, 0x3E, 0x00 };
-    case 'R': return { 0x7F, 0x48, 0x48, 0x48, 0x78, 0x00 };
-    case 'S': return { 0x46, 0x49, 0x49, 0x49, 0x31, 0x00 };
-    case 'T': return { 0x01, 0x01, 0x7F, 0x01, 0x01, 0x00 };
-    case 'U': return { 0x3F, 0x01, 0x01, 0x01, 0x3F, 0x00 };
-    case 'V': return { 0x1F, 0x20, 0x40, 0x20, 0x1F, 0x00 };
-    case 'W': return { 0x7F, 0x01, 0x1E, 0x01, 0x7F, 0x00 };
-    case 'X': return { 0x63, 0x14, 0x08, 0x14, 0x63, 0x00 };
-    case 'Y': return { 0x30, 0x0C, 0x03, 0x0C, 0x30, 0x00 };
-    case 'Z': return { 0x61, 0x51, 0x49, 0x45, 0x43, 0x00 };
-
-    // Kleine letters a-z
-    case 'a': return { 0x20, 0x54, 0x54, 0x54, 0x78, 0x00 };
-    case 'b': return { 0x7F, 0x48, 0x48, 0x48, 0x30, 0x00 };
-    case 'c': return { 0x38, 0x44, 0x44, 0x44, 0x20, 0x00 };
-    case 'd': return { 0x30, 0x48, 0x48, 0x48, 0x7F, 0x00 };
-    case 'e': return { 0x38, 0x54, 0x54, 0x54, 0x18, 0x00 };
-    case 'f': return { 0x08, 0x7E, 0x09, 0x01, 0x02, 0x00 };
-    case 'g': return { 0x0C, 0x52, 0x52, 0x52, 0x3E, 0x00 };
-    case 'h': return { 0x7F, 0x08, 0x08, 0x08, 0x70, 0x00 };
-    case 'i': return { 0x48, 0x7D, 0x40, 0x00 };       // Had al 0x00
-    case 'j': return { 0x20, 0x40, 0x40, 0x3D, 0x00 };       // Had al 0x00
-    case 'k': return { 0x7F, 0x10, 0x28, 0x44, 0x00 };       // Had al 0x00
-    case 'l': return { 0x41, 0x7F, 0x40, 0x00 };       // Had al 0x00
-    case 'm': return { 0x7C, 0x04, 0x18, 0x04, 0x78, 0x00 };
-    case 'n': return { 0x7C, 0x08, 0x04, 0x04, 0x78, 0x00 };
-    case 'o': return { 0x38, 0x44, 0x44, 0x44, 0x38, 0x00 };
-    case 'p': return { 0x7C, 0x14, 0x14, 0x14, 0x08, 0x00 };
-    case 'q': return { 0x08, 0x14, 0x14, 0x14, 0x7C, 0x00 };
-    case 'r': return { 0x7C, 0x08, 0x04, 0x04, 0x08, 0x00 };
-    case 's': return { 0x48, 0x54, 0x54, 0x54, 0x20, 0x00 };
-    case 't': return { 0x04, 0x3F, 0x44, 0x40, 0x20, 0x00 };
-    case 'u': return { 0x3C, 0x40, 0x40, 0x20, 0x7C, 0x00 };
-    case 'v': return { 0x1C, 0x20, 0x40, 0x20, 0x1C, 0x00 };
-    case 'w': return { 0x3C, 0x40, 0x30, 0x40, 0x3C, 0x00 };
-    case 'x': return { 0x44, 0x28, 0x10, 0x28, 0x44, 0x00 };
-    case 'y': return { 0x0C, 0x50, 0x50, 0x50, 0x3C, 0x00 };
-    case 'z': return { 0x44, 0x64, 0x54, 0x4C, 0x44, 0x00 };
-
-
-    // Speciale tekens
-    case ' ': return { 0x00, 0x00, 0x00, 0x00 }; // Spatie
-    case '!': return { 0x00, 0x5F, 0x00 }; // Uitroepteken
-    case '?': return { 0x20, 0x40, 0x4D, 0x48, 0x30, 0x00 };
-    case '.': return { 0x00, 0x40, 0x00 }; // Punt
-    default: return { 0x00, 0x00, 0x00, 0x00 };  // Onbekend teken
+void drawEmoji(const char* text, uint8_t row, uint8_t offset) {
+    uint8_t cnt = offset;
+    for (uint32_t i = 0; i < strlen(text); i++) {
+        std::vector<uint8_t> bitmap = getEmojiBitmap(text[i]);
+        for (size_t y = 0; y < bitmap.size(); y++) {
+            setCursor(row, cnt);
+            cnt++;
+            sendData(bitmap[y]);
+        }
+    }
 }
 
-}

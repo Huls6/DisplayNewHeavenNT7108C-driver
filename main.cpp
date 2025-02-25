@@ -18,9 +18,21 @@ int main() {
     initDisplay(chip);
     clearScreen();
     sleep(2);
-    drawText("Hello There!I print text", 0);
-    drawText("By Thijs Hulshof", 7);
-    drawText("HAN SolarBoat", 3);
+    for (int i =0; i < 8; i++) {
+        drawText("|",i,30);
+        drawText("|",i,98);
+    }
+    drawEmoji("M",0,108);
+    drawText("100%",1,102);
+
+    drawText("Temp:", 0, 1);
+    drawText("75*C",1,5);
+
+    drawText("Hoek:", 4,1);
+    drawText("10*", 5,5);
+
+
+
     sleep(2);
     //clearScreen();
 

@@ -10,5 +10,7 @@ add_executable(DisplayTest main.cpp
         display.cpp
         display.h
         gpio.cpp
-        gpio.h)
+        gpio.h
+        bitmapDisplay.cpp
+        bitmapDisplay.h)
 target_link_libraries(DisplayTest ${GPIOD_LIB} ${RT_LIB})
