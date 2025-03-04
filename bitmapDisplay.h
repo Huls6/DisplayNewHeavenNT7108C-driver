@@ -5,11 +5,11 @@
 #ifndef BITMAPDISPLAY_H
 #define BITMAPDISPLAY_H
 
-#include <cstdint>
-#include <vector>
+#include <stdint.h>
+#include <stdlib.h>
 
-std::vector<uint8_t> getLetterBitmap(char letter);
-std::vector<uint8_t> getEmojiBitmap(char emoji);
+const uint8_t* getLetterBitmap(const char letter, size_t* size);
+const uint8_t* getEmojiBitmap(const char emoji, size_t* size);
 
 
 #endif //BITMAPDISPLAY_H
