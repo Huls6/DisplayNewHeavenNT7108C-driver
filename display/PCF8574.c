@@ -1,6 +1,6 @@
 #include "driver/i2c.h"
 #include "esp_log.h"
-#include "PCF8574.h"
+#include "display/PCF8574.h"
 
 esp_err_t i2c_master_init() {
     i2c_config_t conf = {

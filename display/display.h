@@ -5,10 +5,13 @@
 #ifndef DISPLAY_H
 #define DISPLAY_H
 #include <unistd.h>
-#include "gpioPins.h"
-#include "bitmapDisplay.h"
+#include "gpio/gpioPins.h"
+#include "display/bitmapDisplay.h"
 
+#define DISPLAY_WIDTH 127
+#define DISPLAY_ROWS 7
 
+#define DISPLAY_UPSIDEDOWN // Uncomment to reverse display screen
 
 // GPIO pinnen defini�ren
 #define RS  32
@@ -25,7 +28,9 @@ void initDisplay();
 void clearScreen();
 void setCursor(uint8_t row, uint8_t offset);
 void drawText(const char* text, uint8_t row, uint8_t offset);
+void drawNumber(const uint16_t cnt, uint8_t row, uint8_t offset);
 void drawEmoji(const char* text, uint8_t row, uint8_t offset);
+uint8_t reverseBits(uint8_t byte);
 
 
 #endif //DISPLAY_H

@@ -1,4 +1,4 @@
-#include "gpioPins.h"
+#include "gpio/gpioPins.h"
 #include "driver/gpio.h"
 #include <stdio.h>
 
